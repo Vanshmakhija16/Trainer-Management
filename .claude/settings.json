@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/zod/package.json'\\).version\\)\")",
+      "Bash(npx next *)",
+      "Bash(npm view *)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(grep -rn 'QueryEvent\\\\|emit.*event\\\\|$on' app/generated/prisma/client.ts)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(netstat -ano)",
+      "Bash(tasklist)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  time_total=%{time_total}s\\\\n\" --max-time 60 http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  time_total=%{time_total}s\\\\n\" --max-time 60 http://localhost:3000/trainers)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  %{time_total}s\\\\n\" --max-time 30 \"http://localhost:3000/test\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}  %{time_total}s\\\\n\" --max-time 15 \"http://localhost:3000/_next/static/chunks/main-app.js\")",
+      "Bash(curl -s -o /dev/null -w \"/ -> HTTP %{http_code}  %{time_total}s\\\\n\" --max-time 25 \"http://localhost:3000/\")",
+      "PowerShell(Get-Process -Id 27276 -ErrorAction SilentlyContinue | Select-Object Id, StartTime, @{N='RunningMin';E={[math]::Round\\(\\(\\(Get-Date\\) - $_.StartTime\\).TotalMinutes,1\\)}}; \"--- .env last modified ---\"; \\(Get-Item \"c:\\\\Users\\\\HP\\\\Desktop\\\\trainer-management-system\\\\.env\"\\).LastWriteTime)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(node --import tsx -e ' *)",
+      "PowerShell(npx prisma generate)",
+      "PowerShell(npx tsc --noEmit)",
+      "PowerShell(npx next build 2>&1)",
+      "PowerShell(npx prisma migrate status 2>&1)",
+      "PowerShell(npx prisma migrate deploy 2>&1)",
+      "Bash(node scripts/verify-db.mjs)",
+      "PowerShell(npx prisma generate 2>&1)",
+      "Bash(grep -qiE \"ready|local:|started server\" /tmp/devserver.log)",
+      "Bash(break)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:3000/api/organizations)",
+      "Bash(curl -s -X POST http://localhost:3000/api/events -H \"Content-Type: application/json\" -d '{\"title\":\"Test Event\",\"organizationId\":\"cmqhv12190001wofdeeuj5q86\",\"eventType\":\"WORKSHOP\",\"status\":\"PLANNED\",\"eventDate\":\"2026-07-01\",\"endDate\":\"2026-07-03\"}')",
+      "Bash(curl -s -i -X POST http://localhost:3000/api/events -H \"Content-Type: application/json\" -d '{\"title\":\"Test Event 2\",\"organizationId\":\"cmqhv12190001wofdeeuj5q86\",\"eventType\":\"WORKSHOP\",\"status\":\"PLANNED\",\"eventDate\":\"2026-07-01\",\"endDate\":\"2026-07-03\"}')",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(taskkill //PID 18568 //F)",
+      "Bash(curl -s -i -X POST http://localhost:3000/api/events -H \"Content-Type: application/json\" -d '{\"title\":\"Verify Multi-Day Event\",\"organizationId\":\"cmqhv12190001wofdeeuj5q86\",\"eventType\":\"WORKSHOP\",\"status\":\"PLANNED\",\"eventDate\":\"2026-07-01\",\"endDate\":\"2026-07-03\",\"revenue\":\"50000\",\"expenses\":\"10000\"}')",
+      "Bash(curl -s -X POST http://localhost:3000/api/events -H \"Content-Type: application/json\" -d '{\"title\":\"Verify Multi-Day Event 2\",\"organizationId\":\"cmqhv12190001wofdeeuj5q86\",\"eventType\":\"WORKSHOP\",\"status\":\"PLANNED\",\"eventDate\":\"2026-07-01\",\"endDate\":\"2026-07-03\",\"revenue\":\"50000\",\"expenses\":\"10000\"}')",
+      "Bash(curl -s \"http://localhost:3000/api/events\")"
+    ]
+  }
+}
