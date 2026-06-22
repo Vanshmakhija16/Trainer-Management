@@ -1,12 +1,37 @@
 import Groq from "groq-sdk";
 import mammoth from "mammoth";
 import AdmZip from "adm-zip";
+import { extractText, getDocumentProxy } from "unpdf";
 
-if (!process.env.GROQ_API_KEY) {
-  throw new Error("GROQ_API_KEY is not set.");
+/**
+ * Lazily-constructed Groq client.
+ *
+ * IMPORTANT: We do NOT validate/throw on a missing GROQ_API_KEY at module
+ * load time. Next.js can import route modules (and everything they import)
+ * during `next build` for static analysis, not just at request time.
+ * Throwing at import time would crash the *build* on Vercel even when the
+ * variable is correctly configured for the Runtime environment, or in
+ * preview builds where secrets are intentionally withheld.
+ *
+ * Validating lazily — the first time a request actually needs the client —
+ * keeps this a pure runtime-only code path, which is required for Vercel's
+ * serverless functions.
+ */
+let _groq: Groq | null = null;
+
+function getGroqClient(): Groq {
+  if (_groq) return _groq;
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "GROQ_API_KEY is not set. Add it to your environment variables (Vercel Project Settings → Environment Variables) before calling the resume extraction API.",
+    );
+  }
+
+  _groq = new Groq({ apiKey });
+  return _groq;
 }
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 export type ExtractedResume = {
   firstName?: string;
@@ -66,12 +91,18 @@ Fields to extract:
 Return only the JSON object, no explanation, no markdown.
 `;
 
-const DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const DOCX_MIME =
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const DOC_MIME = "application/msword";
+const PDF_MIME = "application/pdf";
+
+const MIN_PDF_TEXT_LENGTH = 50;
 
 /**
  * Extracts ALL text from a DOCX including text boxes, headers, footers,
  * and hyperlink URLs — by reading the raw XML inside the DOCX zip.
+ *
+ * Pure JS (mammoth + adm-zip), no native dependencies — safe on Vercel.
  */
 async function extractTextFromDocx(buffer: Buffer): Promise<string> {
   const { value: bodyText } = await mammoth.extractRawText({ buffer });
@@ -112,44 +143,118 @@ async function extractTextFromDocx(buffer: Buffer): Promise<string> {
 }
 
 /**
- * Extracts text from PDF using pdf-parse v2's class-based API.
- * PDFParse is instantiated with the buffer, then getText() is called.
+ * Extracts text from a PDF using `unpdf`.
+ *
+ * Why unpdf instead of pdf-parse v2:
+ * -----------------------------------------------------------------------
+ * `pdf-parse` v2 wraps `pdfjs-dist`, which assumes a browser-like
+ * environment with `DOMMatrix`, `ImageData`, and `Path2D` available
+ * globally, plus an optional native `canvas` binding (`@napi-rs/canvas`)
+ * for rendering. On Vercel's serverless (Node.js Lambda) runtime:
+ *   - These browser globals do not exist.
+ *   - `@napi-rs/canvas` ships prebuilt native binaries per OS/CPU, and
+ *     Next.js's serverless file tracing does not reliably include them
+ *     unless every transitive package is explicitly externalized — and
+ *     even then, native addons are a common source of "works on my
+ *     machine" failures across Lambda's read-only, ephemeral filesystem.
+ *   - The result is exactly the error seen here: pdf-parse->pdfjs-dist
+ *     tries to polyfill DOMMatrix/ImageData/Path2D via the native canvas
+ *     module, that module fails to load, and the polyfill itself throws
+ *     `DOMMatrix is not defined` deep inside PDF.js's module-evaluation
+ *     code (i.e. before your function body even runs).
+ *
+ * `unpdf` ships its own pre-bundled, canvas-free build of PDF.js
+ * (Rollup-bundled, with browser-only code stripped and the worker
+ * inlined) specifically for serverless/edge runtimes. It has zero native
+ * dependencies, needs no DOMMatrix/ImageData/Path2D polyfills, and is
+ * verified to run on Vercel serverless functions, Vercel Edge, AWS
+ * Lambda, and Cloudflare Workers.
  */
 async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  const result = await parser.getText();
-  return result.text;
+  const pdf = await getDocumentProxy(new Uint8Array(buffer));
+
+  try {
+    const { text } = await extractText(pdf, { mergePages: true });
+    return text;
+  } finally {
+    // Release the document's memory. Vercel functions have a 1GB memory
+    // ceiling — always clean up after processing, especially for
+    // multi-page PDFs.
+    await pdf.destroy();
+  }
 }
 
-export async function extractResumeData(file: File): Promise<ExtractedResume> {
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+type SupportedFileKind = "pdf" | "doc";
 
+function detectFileKind(file: File): SupportedFileKind | null {
   const isDocx =
     file.type === DOCX_MIME ||
     file.type === DOC_MIME ||
-    file.name.endsWith(".docx") ||
-    file.name.endsWith(".doc");
+    file.name.toLowerCase().endsWith(".docx") ||
+    file.name.toLowerCase().endsWith(".doc");
 
-  const isPdf =
-    file.type === "application/pdf" || file.name.endsWith(".pdf");
+  if (isDocx) return "doc";
 
-  let resumeText = "";
+  const isPdf = file.type === PDF_MIME || file.name.toLowerCase().endsWith(".pdf");
+  if (isPdf) return "pdf";
 
-  if (isDocx) {
-    resumeText = await extractTextFromDocx(buffer);
-  } else if (isPdf) {
-    resumeText = await extractTextFromPdf(buffer);
-    if (!resumeText || resumeText.length < 50) {
+  return null;
+}
+
+async function extractRawResumeText(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const kind = detectFileKind(file);
+
+  if (kind === "doc") {
+    return extractTextFromDocx(buffer);
+  }
+
+  if (kind === "pdf") {
+    const text = await extractTextFromPdf(buffer);
+    if (!text || text.trim().length < MIN_PDF_TEXT_LENGTH) {
       throw new Error(
         "Could not extract text from this PDF. It may be scanned or image-based. Please upload a text-based PDF or a Word document.",
       );
     }
-  } else {
-    throw new Error("Only PDF and Word documents are supported.");
+    return text;
   }
 
+  throw new Error("Only PDF and Word documents are supported.");
+}
+
+function parseGroqJsonResponse(raw: string): ExtractedResume {
+  const clean = raw.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+
+  // The model occasionally emits a dangling/empty value (`"field": ,` or
+  // `"field": }`) — normalize those to `null` so JSON.parse doesn't choke,
+  // then strip the now-null numeric fields the original API contract
+  // expects to be entirely absent rather than null.
+  const repaired = clean
+    .replace(/":\s*,/g, '": null,')
+    .replace(/":\s*}/g, '": null}');
+
+  let parsed: ExtractedResume;
+  try {
+    parsed = JSON.parse(repaired) as ExtractedResume;
+  } catch {
+    throw new Error(`Groq returned invalid JSON. Raw response: ${raw}`);
+  }
+
+  if (parsed.totalTrainingExperience === null) {
+    delete parsed.totalTrainingExperience;
+  }
+  if (parsed.industryExperience === null) {
+    delete parsed.industryExperience;
+  }
+
+  return parsed;
+}
+
+export async function extractResumeData(file: File): Promise<ExtractedResume> {
+  const resumeText = await extractRawResumeText(file);
+
+  const groq = getGroqClient();
   const response = await groq.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
@@ -160,15 +265,5 @@ export async function extractResumeData(file: File): Promise<ExtractedResume> {
   });
 
   const text = response.choices[0]?.message?.content?.trim() ?? "";
-  const clean = text.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
-
-  try {
-    const fixed = clean.replace(/":\s*,/g, '": null,').replace(/":\s*}/g, '": null}');
-    const parsed = JSON.parse(fixed) as ExtractedResume;
-    if (parsed.totalTrainingExperience === null) delete parsed.totalTrainingExperience;
-    if (parsed.industryExperience === null) delete parsed.industryExperience;
-    return parsed;
-  } catch {
-    throw new Error("Groq returned invalid JSON. Raw response: " + text);
-  }
+  return parseGroqJsonResponse(text);
 }
