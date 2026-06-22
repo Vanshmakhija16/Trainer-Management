@@ -67,7 +67,7 @@ const stringArray = z
 
 export const trainerSchema = z.object({
   firstName: z.string().trim().min(1, "First name is required"),
-  lastName: z.string().trim().min(1, "Last name is required"),
+  lastName: z.string().trim().optional().or(z.literal("")).transform((value) => value ?? ""),
   email: z.string().trim().email("A valid email is required"),
   phone: z.string().trim().min(1, "Phone is required"),
   location: z.string().trim().min(1, "Location is required"),

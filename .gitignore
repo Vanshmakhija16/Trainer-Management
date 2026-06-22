@@ -44,3 +44,5 @@ next-env.d.ts
 
 # prisma generated client (regenerated at build time via postinstall)
 /app/generated/prisma
+
+.vercel
