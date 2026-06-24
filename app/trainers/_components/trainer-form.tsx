@@ -68,22 +68,16 @@ const availabilityOptions = [
 const inputClass =
   "w-full rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100";
 
-function RequiredMark() {
-  return <span className="text-red-600">*</span>;
-}
-
 function FieldLabel({
   children,
   htmlFor,
-  optional = false,
 }: {
   children: React.ReactNode;
   htmlFor?: string;
-  optional?: boolean;
 }) {
   return (
     <label htmlFor={htmlFor} className="block text-sm font-semibold text-zinc-800">
-      {children} {optional ? null : <RequiredMark />}
+      {children}
     </label>
   );
 }
@@ -131,7 +125,6 @@ function buildInitialValues(d: TrainerDefaults): FormValues {
 const STORAGE_KEY = "trainer-form-draft";
 const RESUME_STORAGE_KEY = "trainer-form-resume";
 
-/** Convert a File to base64 string for sessionStorage persistence. */
 async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -141,7 +134,6 @@ async function fileToBase64(file: File): Promise<string> {
   });
 }
 
-/** Convert a base64 data URL back to a File object. */
 function base64ToFile(dataUrl: string, fileName: string): File {
   const [header, data] = dataUrl.split(",");
   const mime = header.match(/:(.*?);/)?.[1] ?? "application/octet-stream";
@@ -151,14 +143,13 @@ function base64ToFile(dataUrl: string, fileName: string): File {
   return new File([bytes], fileName, { type: mime });
 }
 
-/** Inject a File into a file input (bypasses read-only .files via DataTransfer). */
 function injectFileIntoInput(input: HTMLInputElement, file: File) {
   try {
     const dt = new DataTransfer();
     dt.items.add(file);
     input.files = dt.files;
   } catch {
-    // DataTransfer not supported — nothing we can do
+    // DataTransfer not supported
   }
 }
 
@@ -185,29 +176,21 @@ export function TrainerForm({
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
 
-  // On mount: restore form values and resume file from sessionStorage
   useEffect(() => {
     if (!isEdit) {
       try {
         const saved = sessionStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved) as FormValues;
-          setValues(parsed);
-        }
+        if (saved) setValues(JSON.parse(saved) as FormValues);
       } catch { /* ignore */ }
 
-      // Restore resume file into the input
       try {
         const savedResume = sessionStorage.getItem(RESUME_STORAGE_KEY);
         if (savedResume) {
           const { dataUrl, fileName } = JSON.parse(savedResume) as { dataUrl: string; fileName: string };
           const file = base64ToFile(dataUrl, fileName);
           setSavedFileName(fileName);
-          // Inject after a tick so the input is mounted
           setTimeout(() => {
-            if (resumeInputRef.current) {
-              injectFileIntoInput(resumeInputRef.current, file);
-            }
+            if (resumeInputRef.current) injectFileIntoInput(resumeInputRef.current, file);
           }, 0);
         }
       } catch { /* ignore */ }
@@ -215,7 +198,6 @@ export function TrainerForm({
     setHydrated(true);
   }, [isEdit]);
 
-  // Persist form values to sessionStorage on every change
   useEffect(() => {
     if (!isEdit && hydrated) {
       try {
@@ -224,7 +206,6 @@ export function TrainerForm({
     }
   }, [values, isEdit, hydrated]);
 
-  // Clear all draft data on successful submit
   useEffect(() => {
     if (state.success && !isEdit) {
       try {
@@ -248,7 +229,6 @@ export function TrainerForm({
     });
   }
 
-  // When user selects a resume file, persist it to sessionStorage immediately
   async function handleResumeChange() {
     const file = resumeInputRef.current?.files?.[0];
     if (!file || isEdit) return;
@@ -256,7 +236,7 @@ export function TrainerForm({
       const dataUrl = await fileToBase64(file);
       sessionStorage.setItem(RESUME_STORAGE_KEY, JSON.stringify({ dataUrl, fileName: file.name }));
       setSavedFileName(file.name);
-    } catch { /* ignore — file too large or storage full */ }
+    } catch { /* ignore */ }
   }
 
   async function handleAutofill() {
@@ -311,11 +291,10 @@ export function TrainerForm({
     >
       {isEdit && d.id ? <input type="hidden" name="id" value={d.id} /> : null}
 
+      {/* ── Personal Details ── */}
       <section className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
-          <p className="text-sm font-semibold text-zinc-800">
-            Name <RequiredMark />
-          </p>
+          <p className="text-sm font-semibold text-zinc-800">Name</p>
         </div>
 
         <div className="space-y-2">
@@ -324,7 +303,6 @@ export function TrainerForm({
             id="firstName"
             name="firstName"
             type="text"
-            required
             value={values.firstName}
             onChange={(e) => set("firstName", e.target.value)}
             className={inputClass}
@@ -332,7 +310,7 @@ export function TrainerForm({
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="lastName" optional>Last Name</FieldLabel>
+          <FieldLabel htmlFor="lastName">Last Name</FieldLabel>
           <input
             id="lastName"
             name="lastName"
@@ -343,9 +321,8 @@ export function TrainerForm({
           />
         </div>
 
-        {/* Email — optional */}
         <div className="space-y-2">
-          <FieldLabel htmlFor="email" optional>Email</FieldLabel>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
           <input
             id="email"
             name="email"
@@ -356,9 +333,8 @@ export function TrainerForm({
           />
         </div>
 
-        {/* Phone — optional */}
         <div className="space-y-2">
-          <FieldLabel htmlFor="phone" optional>Phone</FieldLabel>
+          <FieldLabel htmlFor="phone">Phone</FieldLabel>
           <input
             id="phone"
             name="phone"
@@ -370,9 +346,7 @@ export function TrainerForm({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="linkedin" className="block text-sm font-semibold text-zinc-800">
-            LinkedIn Profile
-          </label>
+          <FieldLabel htmlFor="linkedin">LinkedIn Profile</FieldLabel>
           <input
             id="linkedin"
             name="linkedin"
@@ -383,11 +357,8 @@ export function TrainerForm({
           />
         </div>
 
-        {/* Instagram URL — optional */}
         <div className="space-y-2">
-          <label htmlFor="insta" className="block text-sm font-semibold text-zinc-800">
-            Instagram Profile URL
-          </label>
+          <FieldLabel htmlFor="insta">Instagram Profile URL</FieldLabel>
           <input
             id="insta"
             name="insta"
@@ -404,7 +375,6 @@ export function TrainerForm({
           <Combobox
             id="location"
             name="location"
-            required
             defaultValue={values.location}
             key={values.location}
             options={indiaCityStates}
@@ -413,18 +383,18 @@ export function TrainerForm({
         </div>
       </section>
 
+      {/* ── Experience & Charges ── */}
       <section className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <FieldLabel htmlFor="primaryRole">Primary Role</FieldLabel>
           <select
             id="primaryRole"
             name="primaryRole"
-            required
             value={values.primaryRole}
             onChange={(e) => set("primaryRole", e.target.value)}
             className={inputClass}
           >
-            <option value="" disabled>Select role</option>
+            <option value="">Select role</option>
             {primaryRoles.map((role) => (
               <option key={role} value={role}>{role}</option>
             ))}
@@ -438,7 +408,6 @@ export function TrainerForm({
             name="totalTrainingExperience"
             type="number"
             min="0"
-            required
             value={values.totalTrainingExperience}
             onChange={(e) => set("totalTrainingExperience", e.target.value)}
             className={inputClass}
@@ -452,7 +421,6 @@ export function TrainerForm({
             name="industryExperience"
             type="number"
             min="0"
-            required
             value={values.industryExperience}
             onChange={(e) => set("industryExperience", e.target.value)}
             className={inputClass}
@@ -465,7 +433,6 @@ export function TrainerForm({
             id="expectedChargesPerDay"
             name="expectedChargesPerDay"
             type="text"
-            required
             value={values.expectedChargesPerDay}
             onChange={(e) => set("expectedChargesPerDay", e.target.value)}
             className={inputClass}
@@ -473,11 +440,10 @@ export function TrainerForm({
         </div>
       </section>
 
+      {/* ── Checkboxes ── */}
       <section className="grid gap-5 md:grid-cols-2">
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-zinc-800">
-            Areas of Expertise <RequiredMark />
-          </legend>
+          <legend className="text-sm font-semibold text-zinc-800">Areas of Expertise</legend>
           <div className="grid gap-3 rounded-md border border-zinc-200 p-4">
             {expertiseAreas.map((area) => (
               <label key={area} className="flex items-center gap-3 text-sm text-zinc-700">
@@ -497,7 +463,7 @@ export function TrainerForm({
 
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold text-zinc-800">
-            Type of Trainings You Have Delivered <RequiredMark />
+            Type of Trainings You Have Delivered
           </legend>
           <div className="grid gap-3 rounded-md border border-zinc-200 p-4">
             {trainingTypes.map((type) => (
@@ -517,9 +483,7 @@ export function TrainerForm({
         </fieldset>
 
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-zinc-800">
-            Availability <RequiredMark />
-          </legend>
+          <legend className="text-sm font-semibold text-zinc-800">Availability</legend>
           <div className="grid gap-3 rounded-md border border-zinc-200 p-4">
             {availabilityOptions.map((option) => (
               <label key={option} className="flex items-center gap-3 text-sm text-zinc-700">
@@ -543,7 +507,6 @@ export function TrainerForm({
             id="languages"
             name="languages"
             type="text"
-            required
             value={values.languages}
             onChange={(e) => set("languages", e.target.value)}
             className={inputClass}
@@ -551,6 +514,7 @@ export function TrainerForm({
         </div>
       </section>
 
+      {/* ── Detailed Expertise ── */}
       <div className="space-y-2">
         <FieldLabel htmlFor="detailedExpertise">
           Detailed Areas of Expertise / Modules You Can Deliver
@@ -559,13 +523,13 @@ export function TrainerForm({
           id="detailedExpertise"
           name="detailedExpertise"
           rows={5}
-          required
           value={values.detailedExpertise}
           onChange={(e) => set("detailedExpertise", e.target.value)}
           className={inputClass}
         />
       </div>
 
+      {/* ── Photo & Resume ── */}
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <p className="block text-sm font-semibold text-zinc-800">Profile Photo</p>
@@ -573,7 +537,7 @@ export function TrainerForm({
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="resume" optional={isEdit}>
+          <FieldLabel htmlFor="resume">
             {isEdit ? "Replace Resume" : "Resume"}
           </FieldLabel>
           {isEdit && d.resumeUrl ? (
@@ -594,14 +558,11 @@ export function TrainerForm({
             name="resume"
             type="file"
             ref={resumeInputRef}
-            required={!isEdit}
             onChange={handleResumeChange}
             className="block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-zinc-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
           />
           {!isEdit && savedFileName ? (
-            <p className="text-xs text-teal-700">
-              {/* ✓ Resume saved: <span className="font-medium">{savedFileName}</span> */}
-            </p>
+            <p className="text-xs text-teal-700" />
           ) : null}
           <button
             type="button"
@@ -617,16 +578,14 @@ export function TrainerForm({
         </div>
       </div>
 
+      {/* ── Declaration ── */}
       {!isEdit ? (
         <fieldset className="space-y-3">
-          <legend className="text-sm font-semibold text-zinc-800">
-            Declaration <RequiredMark />
-          </legend>
+          <legend className="text-sm font-semibold text-zinc-800">Declaration</legend>
           <label className="flex gap-3 rounded-md border border-zinc-200 p-4 text-sm text-zinc-700">
             <input
               type="checkbox"
               name="declarationAccepted"
-              required
               className="mt-0.5 size-4 rounded border-zinc-300 text-teal-700"
             />
             <span>
