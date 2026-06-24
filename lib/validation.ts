@@ -9,9 +9,6 @@ import {
   activityTypes,
 } from "@/lib/status";
 
-// NOTE: FormData.get() returns null for absent fields, so every optional
-// helper must accept null (not just undefined) or Zod rejects the whole form
-// with "Invalid input" the moment any optional field is left blank.
 const optionalDecimal = z
   .union([z.string(), z.number()])
   .nullish()
@@ -169,6 +166,8 @@ export const eventSchema = z.object({
   startTime: optionalString,
   endTime: optionalString,
   venue: optionalString,
+  noOfSessions: optionalInt,
+  sessionCharges: optionalDecimal,
   expectedParticipants: optionalInt,
   actualParticipants: optionalInt,
   status: z

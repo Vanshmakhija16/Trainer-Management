@@ -8,9 +8,17 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Trainers — the core human asset. Conducts Events and is pitched to
-// Organizations via the recruitment pipeline (Assignment).
+// Trainers
 // ---------------------------------------------------------------------------
+
+enum TrainerType {
+  YOGA
+  CORPORATE
+  WELLNESS
+  FITNESS
+  OTHER
+}
+
 model Trainer {
   id          String   @id @default(cuid())
 
@@ -37,6 +45,14 @@ model Trainer {
   resumeUrl   String?
   photoUrl    String?
 
+  trainerType   TrainerType @default(OTHER)
+
+  yogaStyles      String[] @default([])
+  certification   String?
+  chargesPerDay   Int?
+
+  onboardedYear   Int?
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -45,10 +61,7 @@ model Trainer {
 }
 
 // ---------------------------------------------------------------------------
-// Organization — generic client entity. Replaces the old University model.
-// Covers universities, colleges, corporates, schools, NGOs, government,
-// hospitals, etc. This is the spine of the CRM: every Event, Contact, and
-// recruitment Assignment hangs off an Organization.
+// Organization
 // ---------------------------------------------------------------------------
 enum OrganizationType {
   UNIVERSITY
@@ -72,8 +85,6 @@ model Organization {
   state     String?
   country   String?
   address   String?
-  // Legacy free-text location from the University era; kept for back-compat
-  // and migrated data. New records prefer city/state/country.
   location  String?
   notes     String?
 
@@ -86,8 +97,7 @@ model Organization {
 }
 
 // ---------------------------------------------------------------------------
-// OrganizationContact — one org has many client-side contacts
-// (Dean, HR, TPO, Wellness Manager, Faculty Coordinator, ...).
+// OrganizationContact
 // ---------------------------------------------------------------------------
 model OrganizationContact {
   id             String   @id @default(cuid())
@@ -108,9 +118,7 @@ model OrganizationContact {
 }
 
 // ---------------------------------------------------------------------------
-// Event — the institutional memory record. One event belongs to one
-// organization, can involve many trainers, and carries money, feedback,
-// lead attribution, documents, and a timeline.
+// Event
 // ---------------------------------------------------------------------------
 enum EventType {
   YOGA_SESSION
@@ -142,37 +150,35 @@ model Event {
   organizationId       String
   description          String?
 
-  // eventDate is the start date; endDate is set only for multi-day events.
   eventDate            DateTime?
   endDate              DateTime?
   startTime            String?
   endTime              String?
   venue                String?
 
+  // ── Session fields (from IYD sheet) ──────────────────────────────────────
+  noOfSessions         Int?                        // Total number of sessions
+  sessionCharges       Decimal?    @db.Decimal(12, 2) // Per-session charge (₹)
+  // totalCharges is derived: noOfSessions * sessionCharges — use revenue field
+  // ─────────────────────────────────────────────────────────────────────────
+
   expectedParticipants Int?
   actualParticipants   Int?
 
   status               EventStatus @default(PLANNED)
 
-  // Money. Decimal (not Float) to keep revenue arithmetic exact.
-  // `profit` is derived (revenue - expenses) and written on save so it can be
-  // aggregated directly in analytics queries.
   revenue              Decimal?    @db.Decimal(12, 2)
   expenses             Decimal?    @db.Decimal(12, 2)
   profit               Decimal?    @db.Decimal(12, 2)
 
-  // Feedback
   feedbackRating       Float?
   clientFeedback       String?
   internalNotes        String?
 
-  // Host — inlined rather than a separate model: a host is a single person
-  // tied to one event and rarely reused/queried independently.
   hostName             String?
   hostPhone            String?
   hostEmail            String?
 
-  // Lead attribution
   leadSource           String?
   leadOwner            String?
 
@@ -190,9 +196,7 @@ model Event {
 }
 
 // ---------------------------------------------------------------------------
-// EventTrainer — explicit M:N join between Event and Trainer. Explicit (not
-// implicit) because the relationship carries data: the trainer's role on the
-// event and their payout, which power trainer revenue/utilization analytics.
+// EventTrainer
 // ---------------------------------------------------------------------------
 enum EventTrainerRole {
   LEAD
@@ -219,8 +223,7 @@ model EventTrainer {
 }
 
 // ---------------------------------------------------------------------------
-// EventDocument — files attached to an event (proposal, invoice, attendance
-// sheet, photos, feedback report, completion report).
+// EventDocument
 // ---------------------------------------------------------------------------
 enum DocumentType {
   PROPOSAL
@@ -248,8 +251,7 @@ model EventDocument {
 }
 
 // ---------------------------------------------------------------------------
-// EventActivity — append-only timeline / audit trail for an event
-// (lead received, proposal shared, confirmed, trainer assigned, completed).
+// EventActivity
 // ---------------------------------------------------------------------------
 enum ActivityType {
   LEAD_RECEIVED
@@ -279,9 +281,7 @@ model EventActivity {
 }
 
 // ---------------------------------------------------------------------------
-// Assignment — existing recruitment pipeline (we pitch a Trainer to an
-// Organization). Distinct from an Event (something that actually happened).
-// Repointed from University to Organization.
+// Assignment
 // ---------------------------------------------------------------------------
 enum AssignmentStatus {
   PENDING

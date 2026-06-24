@@ -30,92 +30,101 @@ export function NewEventForm({
       action={formAction}
       className="grid gap-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm sm:grid-cols-2"
     >
+      {/* Title */}
       <label className="sm:col-span-2 flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Title
         <input name="title" required className={inputClass} placeholder="e.g. International Yoga Day 2026" />
       </label>
 
+      {/* Organization */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Organization
+        Organization (Company)
         <select
           name="organizationId"
           required
           defaultValue={defaultOrganizationId ?? ""}
           className={inputClass}
         >
-          <option value="" disabled>
-            Select organization
-          </option>
+          <option value="" disabled>Select organization</option>
           {organizations.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name}
-            </option>
+            <option key={o.id} value={o.id}>{o.name}</option>
           ))}
         </select>
       </label>
 
+      {/* Type */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Type
         <select name="eventType" defaultValue="WORKSHOP" className={inputClass}>
           {eventTypes.map((t) => (
-            <option key={t} value={t}>
-              {eventTypeLabels[t]}
-            </option>
+            <option key={t} value={t}>{eventTypeLabels[t]}</option>
           ))}
         </select>
       </label>
 
+      {/* Session Date / End Date */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Start Date
-        <input
-          type="date"
-          name="eventDate"
-          min="2000-01-01"
-          max="2100-12-31"
-          className={inputClass}
-        />
+        Session Date
+        <input type="date" name="eventDate" min="2000-01-01" max="2100-12-31" className={inputClass} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         End Date
-        {/* <span className="text-xs font-normal text-zinc-400">
-          Leave blank for single-day events
-        </span> */}
-        <input
-          type="date"
-          name="endDate"
-          min="2000-01-01"
-          max="2100-12-31"
-          className={inputClass}
-        />
+        <input type="date" name="endDate" min="2000-01-01" max="2100-12-31" className={inputClass} />
       </label>
 
+      {/* Session Timing */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Start Time
+        Session Start Time
         <input type="time" name="startTime" className={inputClass} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        End Time
+        Session End Time
         <input type="time" name="endTime" className={inputClass} />
       </label>
 
+      {/* No. of Sessions + Session Charges */}
+      <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
+        No. of Sessions
+        <input
+          type="number"
+          min="1"
+          name="noOfSessions"
+          className={inputClass}
+          placeholder="e.g. 4"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
+        Session Charges (₹ per session)
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          name="sessionCharges"
+          className={inputClass}
+          placeholder="e.g. 5000"
+        />
+      </label>
+
+      {/* Status */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Status
         <select name="status" defaultValue="PLANNED" className={inputClass}>
           {eventStatuses.map((s) => (
-            <option key={s} value={s}>
-              {eventStatusLabels[s]}
-            </option>
+            <option key={s} value={s}>{eventStatusLabels[s]}</option>
           ))}
         </select>
       </label>
 
+      {/* Venue */}
       <label className="sm:col-span-2 flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Venue
+        Venue / Session Address
         <input name="venue" className={inputClass} />
       </label>
 
+      {/* Participants */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Expected Participants
         <input type="number" min="0" name="expectedParticipants" className={inputClass} />
@@ -126,9 +135,17 @@ export function NewEventForm({
         <input type="number" min="0" name="actualParticipants" className={inputClass} />
       </label>
 
+      {/* Revenue / Expenses — total charges */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Revenue (₹)
-        <input type="number" min="0" step="0.01" name="revenue" className={inputClass} />
+        Total Charges / Revenue (₹)
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          name="revenue"
+          className={inputClass}
+          placeholder="Leave blank to auto-calculate from sessions"
+        />
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
@@ -136,16 +153,23 @@ export function NewEventForm({
         <input type="number" min="0" step="0.01" name="expenses" className={inputClass} />
       </label>
 
+      {/* Host / HR */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Host Name
+        HR / Host Name
         <input name="hostName" className={inputClass} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
-        Host Phone
+        HR / Host Phone
         <input name="hostPhone" className={inputClass} />
       </label>
 
+      <label className="sm:col-span-2 flex flex-col gap-1 text-sm font-medium text-zinc-700">
+        HR / Host Email
+        <input name="hostEmail" type="email" className={inputClass} />
+      </label>
+
+      {/* Lead */}
       <label className="flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Lead Source
         <input name="leadSource" className={inputClass} placeholder="e.g. Referral, LinkedIn" />
@@ -156,6 +180,7 @@ export function NewEventForm({
         <input name="leadOwner" className={inputClass} placeholder="Who brought the lead" />
       </label>
 
+      {/* Description / Notes */}
       <label className="sm:col-span-2 flex flex-col gap-1 text-sm font-medium text-zinc-700">
         Description
         <textarea name="description" rows={3} className={inputClass} />

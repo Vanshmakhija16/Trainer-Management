@@ -1,21 +1,31 @@
 import type { EventInput } from "@/lib/validation";
 
-/**
- * Maps validated event input to a Prisma data object, deriving `profit`
- * (revenue - expenses) so it can be stored and aggregated directly. Single
- * source of truth for both the API route and the server action.
- */
 export function toEventData(input: EventInput) {
-  const { revenue, expenses, ...rest } = input;
+  const { revenue, expenses, noOfSessions, sessionCharges, ...rest } = input;
+
+  // Auto-derive profit from revenue - expenses
   const profit =
     revenue !== null || expenses !== null
       ? (revenue ?? 0) - (expenses ?? 0)
       : null;
 
+  // Auto-derive total revenue from noOfSessions * sessionCharges if revenue not set
+  const derivedRevenue =
+    revenue !== null
+      ? revenue
+      : noOfSessions !== null && sessionCharges !== null
+      ? (noOfSessions ?? 0) * (sessionCharges ?? 0)
+      : null;
+
   return {
     ...rest,
-    revenue,
+    noOfSessions,
+    sessionCharges,
+    revenue: derivedRevenue,
     expenses,
-    profit,
+    profit:
+      derivedRevenue !== null || expenses !== null
+        ? (derivedRevenue ?? 0) - (expenses ?? 0)
+        : profit,
   };
 }

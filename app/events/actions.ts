@@ -33,6 +33,8 @@ export async function createEvent(
     startTime: formData.get("startTime"),
     endTime: formData.get("endTime"),
     venue: formData.get("venue"),
+    noOfSessions: formData.get("noOfSessions"),
+    sessionCharges: formData.get("sessionCharges"),
     expectedParticipants: formData.get("expectedParticipants"),
     actualParticipants: formData.get("actualParticipants"),
     status: formData.get("status"),
@@ -57,7 +59,6 @@ export async function createEvent(
       data: toEventData(parsed.data) as EventData,
     });
     id = created.id;
-    // Seed the timeline.
     await prisma.eventActivity.create({
       data: {
         eventId: id,
@@ -112,7 +113,7 @@ export async function addEventTrainer(formData: FormData) {
       }),
     ]);
   } catch {
-    // Likely a duplicate (trainer already on event) — ignore.
+    // Likely a duplicate — ignore.
   }
   revalidatePath(`/events/${parsed.data.eventId}`);
 }

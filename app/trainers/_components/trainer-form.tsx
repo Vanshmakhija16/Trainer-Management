@@ -20,6 +20,7 @@ export type TrainerDefaults = {
   phone?: string | null;
   location?: string | null;
   linkedin?: string | null;
+  insta?: string | null;
   primaryRole?: string | null;
   totalTrainingExperience?: number | null;
   industryExperience?: number | null;
@@ -94,6 +95,7 @@ type FormValues = {
   phone: string;
   location: string;
   linkedin: string;
+  insta: string;
   primaryRole: string;
   totalTrainingExperience: string;
   industryExperience: string;
@@ -113,6 +115,7 @@ function buildInitialValues(d: TrainerDefaults): FormValues {
     phone: d.phone ?? "",
     location: d.location ?? "",
     linkedin: d.linkedin ?? "",
+    insta: d.insta ?? "",
     primaryRole: d.primaryRole ?? "",
     totalTrainingExperience: d.totalTrainingExperience != null ? String(d.totalTrainingExperience) : "",
     industryExperience: d.industryExperience != null ? String(d.industryExperience) : "",
@@ -281,6 +284,7 @@ export function TrainerForm({
         phone: data.phone || prev.phone,
         location: data.location || prev.location,
         linkedin: data.linkedin || prev.linkedin,
+        insta: data.insta || prev.insta,
         primaryRole: data.primaryRole || prev.primaryRole,
         totalTrainingExperience: data.totalTrainingExperience != null ? String(data.totalTrainingExperience) : prev.totalTrainingExperience,
         industryExperience: data.industryExperience != null ? String(data.industryExperience) : prev.industryExperience,
@@ -339,26 +343,26 @@ export function TrainerForm({
           />
         </div>
 
+        {/* Email — optional */}
         <div className="space-y-2">
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <FieldLabel htmlFor="email" optional>Email</FieldLabel>
           <input
             id="email"
             name="email"
             type="email"
-            required
             value={values.email}
             onChange={(e) => set("email", e.target.value)}
             className={inputClass}
           />
         </div>
 
+        {/* Phone — optional */}
         <div className="space-y-2">
-          <FieldLabel htmlFor="phone">Phone</FieldLabel>
+          <FieldLabel htmlFor="phone" optional>Phone</FieldLabel>
           <input
             id="phone"
             name="phone"
             type="tel"
-            required
             value={values.phone}
             onChange={(e) => set("phone", e.target.value)}
             className={inputClass}
@@ -375,6 +379,22 @@ export function TrainerForm({
             type="url"
             value={values.linkedin}
             onChange={(e) => set("linkedin", e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        {/* Instagram URL — optional */}
+        <div className="space-y-2">
+          <label htmlFor="insta" className="block text-sm font-semibold text-zinc-800">
+            Instagram Profile URL
+          </label>
+          <input
+            id="insta"
+            name="insta"
+            type="url"
+            placeholder="https://instagram.com/yourhandle"
+            value={values.insta}
+            onChange={(e) => set("insta", e.target.value)}
             className={inputClass}
           />
         </div>
@@ -583,7 +603,7 @@ export function TrainerForm({
               {/* ✓ Resume saved: <span className="font-medium">{savedFileName}</span> */}
             </p>
           ) : null}
-       <button
+          <button
             type="button"
             onClick={handleAutofill}
             disabled={extracting}
